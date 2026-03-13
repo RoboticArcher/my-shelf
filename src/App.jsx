@@ -173,7 +173,6 @@ const CSS = `
   .book-author { font-size: 11px; color: var(--ink3); margin-bottom: 8px; }
   .book-notes { font-size: 11px; color: var(--ink4); line-height: 1.6; margin-top: 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-style: italic; }
   .genre-tag {
-    position: absolute; top: 12px; right: 12px;
     font-size: 9px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
     color: var(--cyan); background: var(--cyan-dim); padding: 2px 8px; border-radius: 2px;
   }
@@ -293,14 +292,7 @@ const CSS = `
   .tier-fill { height: 100%; border-radius: 5px; transition: width 0.6s ease; }
 `;
 
-const MOCK_BOOKS = [
-  { id: 1, title: "Piranesi", author: "Susanna Clarke", cover: "https://covers.openlibrary.org/b/id/10361120-M.jpg", rating: 5, notes: "Labyrinthine and haunting. The worldbuilding is unlike anything I've ever read.", genre: "Fantasy", pages: 272, dateRead: "2024-01" },
-  { id: 2, title: "The Dispossessed", author: "Ursula K. Le Guin", cover: "https://covers.openlibrary.org/b/id/8232289-M.jpg", rating: 5, notes: "Anarchist utopia vs. capitalist world. Le Guin makes you rethink everything.", genre: "Sci-Fi", pages: 387, dateRead: "2024-02" },
-  { id: 3, title: "Normal People", author: "Sally Rooney", cover: "https://covers.openlibrary.org/b/id/9255210-M.jpg", rating: 4, notes: "The dialogue is so naturalistic. Class and intimacy handled beautifully.", genre: "Literary Fiction", pages: 273, dateRead: "2024-03" },
-  { id: 4, title: "Annihilation", author: "Jeff VanderMeer", cover: "https://covers.openlibrary.org/b/id/8291037-M.jpg", rating: 4, notes: "Ecological dread done perfectly. Area X is genuinely unsettling.", genre: "Sci-Fi", pages: 195, dateRead: "2024-04" },
-  { id: 5, title: "A Little Life", author: "Hanya Yanagihara", cover: "https://covers.openlibrary.org/b/id/8739161-M.jpg", rating: 4, notes: "Devastating. I needed weeks to recover.", genre: "Literary Fiction", pages: 720, dateRead: "2024-05" },
-  { id: 6, title: "Recursion", author: "Blake Crouch", cover: "https://covers.openlibrary.org/b/id/9256866-M.jpg", rating: 3, notes: "Fun concept, execution felt rushed toward the end.", genre: "Thriller", pages: 329, dateRead: "2024-06" },
-];
+const MOCK_BOOKS = [];
 
 function Stars({ rating, interactive = false, onChange }) {
   const [hover, setHover] = useState(0);
@@ -332,8 +324,9 @@ function BookCard({ book, onClick, onDelete }) {
         }
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div className="book-title" style={{ paddingRight: 56 }}>{book.title}</div>
+        <div className="book-title">{book.title}</div>
         <div className="book-author">{book.author}</div>
+        <span className="genre-tag" style={{ position: "static", display: "inline-block", marginBottom: 8 }}>{book.genre}</span>
         <Stars rating={book.rating} />
         {book.notes && <div className="book-notes">"{book.notes}"</div>}
       </div>
@@ -588,10 +581,20 @@ function StackModal({ onClose }) {
 }
 
 export default function App() {
-  const [books, setBooks] = useState(MOCK_BOOKS);
+  const [books, setBooks] = useState(() => {
+    try {
+      const saved = localStorage.getItem("shelf-books");
+      return saved ? JSON.parse(saved) : MOCK_BOOKS;
+    } catch { return MOCK_BOOKS; }
+  });
   const [view, setView] = useState("shelf");
   const [modal, setModal] = useState(null);
   const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    try { localStorage.setItem("shelf-books", JSON.stringify(books)); }
+    catch { /* storage full or unavailable */ }
+  }, [books]);
 
   const filtered = books.filter(b =>
     b.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -662,8 +665,13 @@ export default function App() {
               {filtered.length === 0 ? (
                 <div className="empty">
                   <div className="empty-icon">📚</div>
-                  <div className="empty-title">Your shelf is empty</div>
-                  <div style={{ fontSize: 13 }}>Log your first book to get started</div>
+                  <div className="empty-title">Welcome to Shelf</div>
+                  <div style={{ fontSize: 13, color: "var(--ink3)", maxWidth: 340, margin: "8px auto 0", lineHeight: 1.8 }}>
+                    Your personal reading tracker — log every book you've read, rate them, leave notes, and get AI recommendations based on your actual taste.
+                  </div>
+                  <button className="btn-primary" style={{ marginTop: 24, fontSize: 13, padding: "10px 28px" }} onClick={() => setModal("add")}>
+                    Log your first book
+                  </button>
                 </div>
               ) : (
                 <div className="book-grid">
