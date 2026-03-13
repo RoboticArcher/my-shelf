@@ -319,8 +319,9 @@ function Stars({ rating, interactive = false, onChange }) {
   );
 }
 
-function BookCard({ book, onClick }) {
+function BookCard({ book, onClick, onDelete }) {
   const [imgErr, setImgErr] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   return (
     <div className="book-card" onClick={() => onClick(book)}>
       <span className="genre-tag">{book.genre}</span>
@@ -335,6 +336,26 @@ function BookCard({ book, onClick }) {
         <div className="book-author">{book.author}</div>
         <Stars rating={book.rating} />
         {book.notes && <div className="book-notes">"{book.notes}"</div>}
+      </div>
+      <div style={{ position: "absolute", bottom: 10, right: 10 }} onClick={e => e.stopPropagation()}>
+        {confirming ? (
+          <div style={{ display: "flex", gap: 4 }}>
+            <button onClick={() => onDelete(book.id)}
+              style={{ fontSize: 10, padding: "3px 8px", background: "var(--red)", color: "#fff", border: "none", borderRadius: 3, cursor: "pointer", fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>
+              Yes
+            </button>
+            <button onClick={() => setConfirming(false)}
+              style={{ fontSize: 10, padding: "3px 8px", background: "var(--bg)", color: "var(--ink3)", border: "1px solid var(--border)", borderRadius: 3, cursor: "pointer", fontFamily: "'JetBrains Mono', monospace" }}>
+              No
+            </button>
+          </div>
+        ) : (
+          <button onClick={() => setConfirming(true)}
+            style={{ fontSize: 13, padding: "2px 7px", background: "none", color: "var(--ink4)", border: "1px solid transparent", borderRadius: 3, cursor: "pointer", lineHeight: 1 }}
+            title="Remove book">
+            ✕
+          </button>
+        )}
       </div>
     </div>
   );
@@ -646,7 +667,7 @@ export default function App() {
                 </div>
               ) : (
                 <div className="book-grid">
-                  {filtered.map(b => <BookCard key={b.id} book={b} onClick={b => setModal(b)} />)}
+                  {filtered.map(b => <BookCard key={b.id} book={b} onClick={b => setModal(b)} onDelete={id => setBooks(p => p.filter(b => b.id !== id))} />)}
                 </div>
               )}
             </>
