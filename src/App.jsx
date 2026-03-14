@@ -469,77 +469,48 @@ function DetailModal({ book, onClose }) {
 }
 
 function RecsModal({ books, onClose }) {
-  const [parsed, setParsed] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [copied, setCopied] = useState(false);
 
-  const generate = async () => {
-    setLoading(true); setError(null); setParsed(null);
-    const lib = books.map(b => `- "${b.title}" by ${b.author} — ${b.rating}/5. Notes: "${b.notes || "none"}"`).join("\n");
-    try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514", max_tokens: 1000,
-          messages: [{ role: "user", content:
-            `You are a literary taste analyst. Based on this reader's personal library, recommend 4 books they haven't read. Reason specifically from THEIR ratings and notes.\n\nLibrary:\n${lib}\n\nRespond ONLY with valid JSON (no markdown):\n{\n  "taste_profile": "2-sentence synthesis of their reading taste",\n  "recommendations": [\n    { "title": "...", "author": "...", "match": 90, "reason": "specific reasoning from their actual notes/ratings" }\n  ]\n}` }]
-        })
-      });
-      const data = await res.json();
-      const text = data.content?.[0]?.text || "";
-      setParsed(JSON.parse(text.replace(/```json|```/g, "").trim()));
-    } catch { setError("Couldn't reach the AI. Check network or API key."); }
-    setLoading(false);
+  const prompt = `You are a literary taste analyst. Based on my personal reading library below, recommend 4 books I haven't read yet. Reason specifically from MY ratings and notes — not generic popularity.
+
+My Library:
+${books.map(b => `- "${b.title}" by ${b.author} — ${b.rating}/5 stars. Notes: "${b.notes || "none"}"`).join("\n")}
+
+Please give me:
+1. A 2-sentence summary of my reading taste
+2. Four book recommendations with:
+   - Title and author
+   - A match percentage (how well it fits my taste)
+   - A specific reason why I'd like it, referencing my actual books and notes`;
+
+  const copy = () => {
+    navigator.clipboard.writeText(prompt);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
   };
-
-  useEffect(() => { generate(); }, []);
 
   return (
     <div className="backdrop" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal modal-wide">
         <div className="modal-header">
           <div>
-            <div className="modal-title">For You</div>
-            <div className="modal-sub">AI-Reasoned · Not Crowd-Sourced</div>
+            <div className="modal-title">Get Recommendations</div>
+            <div className="modal-sub">Copy prompt · Paste into Claude.ai · Free forever</div>
           </div>
           <button className="close-btn" onClick={onClose}>×</button>
         </div>
 
-        {loading && (
-          <div style={{ textAlign: "center", padding: "48px 0" }}>
-            <div className="spinner" />
-            <div style={{ fontSize: 12, color: "var(--ink4)" }}>Analyzing your library…</div>
-          </div>
-        )}
+        <div style={{ background: "var(--bg)", border: "1.5px solid var(--border)", borderRadius: 8, padding: 18, marginBottom: 20, fontSize: 12, color: "var(--ink3)", lineHeight: 1.8, fontFamily: "'JetBrains Mono', monospace", maxHeight: 260, overflowY: "auto", whiteSpace: "pre-wrap" }}>
+          {prompt}
+        </div>
 
-        {error && <div style={{ color: "var(--red)", fontSize: 13 }}>{error}</div>}
+        <button className="btn-primary" style={{ width: "100%", padding: "13px 0", fontSize: 13 }} onClick={copy}>
+          {copied ? "✓ Copied!" : "Copy Prompt"}
+        </button>
 
-        {parsed && (
-          <>
-            <div className="taste-profile">
-              <div style={{ fontSize: 10, fontWeight: 600, color: "var(--cyan)", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 8 }}>Your Taste Profile</div>
-              <div style={{ fontSize: 13, color: "var(--ink2)", lineHeight: 1.75 }}>{parsed.taste_profile}</div>
-            </div>
-
-            {parsed.recommendations?.map((rec, i) => (
-              <div key={i} className="rec-card">
-                <div className="rec-header">
-                  <div>
-                    <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 17, color: "var(--ink)" }}>{rec.title}</div>
-                    <div style={{ fontSize: 12, color: "var(--ink3)", marginTop: 2 }}>{rec.author}</div>
-                  </div>
-                  <div className="match-badge">{rec.match}% match</div>
-                </div>
-                <div className="rec-reason">{rec.reason}</div>
-              </div>
-            ))}
-
-            <button className="btn-ghost" style={{ width: "100%", marginTop: 8, padding: "10px 0" }} onClick={generate}>
-              Regenerate
-            </button>
-          </>
-        )}
+        <div style={{ marginTop: 16, padding: 14, background: "var(--cyan-dim)", borderRadius: 8, fontSize: 12, color: "var(--ink2)", lineHeight: 1.8 }}>
+          <strong>Then:</strong> open <a href="https://claude.ai" target="_blank" rel="noreferrer" style={{ color: "var(--cyan)" }}>claude.ai</a> in a new tab, paste the prompt, and hit send. You'll get personalized recommendations based on your exact shelf.
+        </div>
       </div>
     </div>
   );
